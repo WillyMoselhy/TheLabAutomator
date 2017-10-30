@@ -17,7 +17,7 @@ The script will perform the following actions,
 5. Create a VM Switch named: **Lab-LabName**
 6. Create parent VHDX files. You configure the script to just use an existing one from LabConfig.PS1 which I recommend to save time and space.
 7. Create the following VMs with the name: **Lab-LabName-ComputerName** e.g. Lab-Contoso-DC01
-   1. Create a VM that will act as the first domain in the forest.
+   1. Create a VM that will act as the first domain in the forest.Domain name will be **LabName.lab**
    2. Create VMs as per the member server part of the labconfig.ps1 script.
   
 ## What can break things
