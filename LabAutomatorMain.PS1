@@ -6,16 +6,53 @@ If (!( $isAdmin )) {
     exit
 }
 
-#This script creates builds the lab as per the labconfig.ps1 file.
+#This script creates builds the lab as per the 0_labconfig.ps1 file.
 $ErrorActionPreference = "stop" #stop on any errors unless instructed otherwise
 $Trace = ""
 $loglevel = 0
 
 #region: Functions
+function WriteInfo([string]$message,[switch]$WaitForResult){
+    if($WaitForResult){
+        Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message" -NoNewline
+        $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message" 
+    }
+    else{
+        Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message"  
+        $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message`r`n" 
+    }
+}
 
-####CHANGE THIS TO USE SCRIPT PATH###
+function WriteResult([string]$message,[switch]$Pass,[switch]$Success){
+    if($Pass){
+        $Script:Trace += " - Pass`r`n"
+        Write-Host " - Pass" -ForegroundColor Cyan
+        if($message){
+            $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message`r`n" 
+            Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message" -ForegroundColor Cyan
+        }
+    }
+    if($Success){
+        $Script:Trace += " - Success`r`n"
+        Write-Host " - Success" -ForegroundColor Green
+        if($message){
+            $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message`r`n" 
+            Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message" -ForegroundColor Green
+        }
+    } 
+}
 
-. test-path "D:\OneDrive\OneDrive - almoselhy\PowerShell Scripts\GitHub\LabAutomator\Convert-WindowsImage.ps1"
+function WriteSuccess([string]$message){
+    $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] Success: $("`t" * $script:LogLevel)$message`r`n" 
+    Write-Host "[$(Get-Date -Format hh:mm:ss)] Success: $("`t" * $script:LogLevel)$message" -ForegroundColor Green
+}
+
+function WriteError([string]$message,[switch]$Terminate){
+    ""
+    $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] ERROR:   $("`t" * $script:LogLevel)$message`r`n" 
+    Write-Host "[$(Get-Date -Format hh:mm:ss)] ERROR:   $("`t" * $script:LogLevel)$message" -ForegroundColor Red
+    if($terminate) {Throw}
+}
 
 function Create-UnattendXML ($ComputerName,$BuiltinAdminPassword,$TimeZone,$OutputPath){
 
@@ -63,11 +100,13 @@ function Copy-DSCModule {
     $DSCModuleName | foreach {
         WriteInfo -message "Checking DSC mdoule '$_'"
         $Script:Loglevel++
+
         
         $DSCModule = Get-DscResource -Module $_ -WarningAction SilentlyContinue
         
+
         #DSC Module installed.
-        if($DSCModule){
+        if($DSCModule -ne $null){
             WriteInfo -message "Found DSC module. Copying to Tools Folder" -WaitForResult
                 $DSCModulePath = ($DSCModule[0].ParentPath -split $_)[0] + "$_"
                 Copy-Item -Path $DSCModulePath -Destination $Destination -Recurse
@@ -106,52 +145,31 @@ function Copy-DSCModule {
     } #$DSCModuleName | foreach
 }
 
-function WriteInfo([string]$message,[switch]$WaitForResult){
-    if($WaitForResult){
-        Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message" -NoNewline
-        $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message" 
-    }
-    else{
-        Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message"  
-        $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)$message`r`n" 
-    }
-}
-
-function WriteResult([string]$message,[switch]$Pass,[switch]$Success){
-    if($Pass){
-        $Script:Trace += " - Pass`r`n"
-        Write-Host " - Pass" -ForegroundColor Cyan
-        if($message){
-            $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message`r`n" 
-            Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message" -ForegroundColor Cyan
-        }
-    }
-    if($Success){
-        $Script:Trace += " - Success`r`n"
-        Write-Host " - Success" -ForegroundColor Green
-        if($message){
-            $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message`r`n" 
-            Write-Host "[$(Get-Date -Format hh:mm:ss)] INFO:    $("`t" * $script:LogLevel)`t$message" -ForegroundColor Green
-        }
-    } 
-}
-
-function WriteSuccess([string]$message){
-    $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] Success: $("`t" * $script:LogLevel)$message`r`n" 
-    Write-Host "[$(Get-Date -Format hh:mm:ss)] Success: $("`t" * $script:LogLevel)$message" -ForegroundColor Green
-}
-
-function WriteError([string]$message,[switch]$Terminate){
-    ""
-    $Script:Trace += "[$(Get-Date -Format hh:mm:ss)] ERROR:   $("`t" * $script:LogLevel)$message`r`n" 
-    Write-Host "[$(Get-Date -Format hh:mm:ss)] ERROR:   $("`t" * $script:LogLevel)$message" -ForegroundColor Red
-    if($terminate) {Throw}
-}
-
 #endregion: Functions
 
 try{
-."D:\OneDrive\OneDrive - almoselhy\PowerShell Scripts\GitHub\LabAutomator\LAbConfig2.ps1"
+
+#region: Load LabConfig.ps1
+    $LabConfigPath = $null #Use this if you do not want to select a file
+    if(!($LabConfigPath)) {
+    WriteInfo -message "Prompting for LabConfig.ps1 File" -WaitForResult
+        [void] [reflection.assembly]::loadwithpartialname("System.Windows.Forms")
+        $OpenFile = New-Object System.Windows.Forms.OpenFileDialog -Property @{
+                        Title="Please select the Lab Config ps1 file."
+                        InitialDirectory = $PSScriptRoot
+                        Filter = "ps1 files (*.ps1)|*.ps1" 
+                    }
+        $OpenFile.ShowDialog() | Out-Null
+        if (!$OpenFile.FileName){
+                WriteError -message  "No file selected. Please run the script again and select a ps1 file" -Terminate
+            }   
+        $LabConfigPath = $OpenFile.FileName                      
+    WriteResult -Success -message $LabConfigPath
+    }
+  
+    ."$LabConfigPath" #Dot sourcing the path
+    if(!$labconfig) {WriteError -message "Lab Config file is invalid" -Terminate} 
+#endregion: Local LabConfig.ps1
 
 #region: DSC Configurations
 
@@ -303,6 +321,23 @@ configuration DSC-MemberServer {
                                     }
     }
 
+    #region: Load (or download) Convert-WindowsImage.ps1
+    WriteInfo -message "Loading Convert-WindowsImage.ps1"
+    $loglevel++
+        if (!(Test-Path "$PSScriptRoot\convert-windowsimage.ps1")){
+            WriteInfo "Downloading Convert-WindowsImage" -WaitForResult
+            try{
+                Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/Microsoft/Virtualization-Documentation/master/hyperv-tools/Convert-WindowsImage/Convert-WindowsImage.ps1 -OutFile "$PSScriptRoot\convert-windowsimage.ps1" -Verbose
+            }catch{
+                WriteError "`t Failed to download convert-windowsimage.ps1!" -Terminate
+            }
+            WriteResult -Success
+        }    
+        ."$PSScriptRoot\convert-windowsimage.ps1"
+    $loglevel--
+    WriteSuccess -message "Convert-WindowsImage Loaded successfully"
+    #endregion: Load (or download) Convert-WindowsImage.ps1
+
 #endregion: Prepare Environment
 
 #region: Create lab folder structure
@@ -326,14 +361,20 @@ $loglevel++
     WriteInfo -message "Creating Folder for Tools" -WaitForResult
         $LabToolsPath = New-Item -Path $LabPath\Tools -ItemType Directory
     WriteResult -Success -message $LabToolsPath.FullName 
-  
+    
+    WriteInfo -message "Copying Lab Config File to Tools Folder" -WaitForResult
+        Copy-Item -Path $LabConfigPath -Destination $LabToolsPath
+    WriteResult -Success
+      
     WriteInfo -message "Adding DSC modules to Tools Folder"
         $DSCModulesPath = New-Item -Path "$LabToolsPath\DSC" -Type Directory
         $DSCModules = ("xActiveDirectory",
                        "xComputerManagement",
                        "xNetworking")
 
-        Copy-DSCModule -DSCModuleName $DSCModules -Destination $DSCModulesPath
+        $ProgressPreference = "SilentlyContinue" #For some reason (a bug?) the progress bar does not go away for this cmdlet! https://social.technet.microsoft.com/Forums/en-US/45a52d2c-2ee2-4c9b-bca8-e2ff57f6b645/getdscresource-creates-a-progress-bar-that-wont-go-away?forum=winserverpowershell
+        Copy-DSCModule -DSCModuleName $DSCModules -Destination $DSCModulesPath |Out-Null
+        $ProgressPreference = "Continue"
     WriteSuccess -message "DSC modules added."
 
     WriteInfo -message "Creating Folder for Temp files" -WaitForResult
@@ -465,9 +506,10 @@ $loglevel++
     #Start VM and wait for configuration to be successfull
     WriteInfo -message "Starting VM and waiting for configuration to apply."
     $loglevel++
+        $Jobs = @()
         Start-VM -VM $VM
         $creds = $labconfig.DomainAdministratorCreds
-        $Job= Start-Job -Name "First Domain Controller" -ArgumentList $VM,$creds -ScriptBlock {          
+        $Jobs+= Start-Job -Name "First Domain Controller" -ArgumentList $VM,$creds -ScriptBlock {          
             Param ($VM,$creds)
             Import-Module -Name Hyper-V
             $FailureCounter = 0
@@ -493,9 +535,9 @@ $loglevel++
         }#Job
         WriteInfo -message "Waiting for background job to complete"
             $Date = Get-Date
-            while ($Job.State -eq "Running")
+            while ($Jobs.State -eq "Running")
             {     
-                $Count = ($Job|where-object {$_.State -eq "Completed"} | Measure-Object -Property State).Count
+                $Count = ($Jobs|where-object {$_.State -eq "Completed"} | Measure-Object -Property State).Count
                 $Percentage = $Count/$Jobs.count*100
                 $WaitTime = "{0:hh}:{0:mm}:{0:ss}" -f (New-TimeSpan -Start $Date -End (Get-Date))
                 Write-Progress -Activity "Waiting for DSC to finish its job" -Status "Wait time: $WaitTime" -PercentComplete $Percentage
@@ -634,6 +676,7 @@ $loglevel++
             Write-Progress -Activity "Waiting for Member VMs to join domain" -Status "$Count Complete - Wait time: $WaitTime" -PercentComplete $Percentage
             Start-Sleep 1  
         }
+    Write-Progress -Activity "Waiting for Member VMs to join domain" -Completed
     WriteSuccess -message "All jobs finished. Waited for: $WaitTime"
     
 
@@ -648,4 +691,13 @@ catch{
     $loglevel = 0
     WriteError "An error occured and script terminated."
     writeError $Error[0]
+    Write-Host "Press any key to exit ..."
+    $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
+    $HOST.UI.RawUI.Flushinputbuffer()
 } #catch
+Finally{
+    $Trace | Out-File "$($LabConfig.LabRootPath)\Tools\Log.Log"
+    Write-Host "Press any key to exit ..."
+    $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | OUT-NULL
+    $HOST.UI.RawUI.Flushinputbuffer()
+}
