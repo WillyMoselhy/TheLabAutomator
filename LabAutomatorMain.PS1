@@ -6,7 +6,7 @@ If (!( $isAdmin )) {
     exit
 }
 
-#This script creates builds the lab as per the 0_labconfig.ps1 file.
+#This script creates builds the lab as per the labconfig.ps1 file.
 $ErrorActionPreference = "stop" #stop on any errors unless instructed otherwise
 $Trace = ""
 $loglevel = 0
