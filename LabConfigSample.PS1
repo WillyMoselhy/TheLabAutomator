@@ -1,38 +1,37 @@
+#Make you changes here to meet your lab's needs.
 
 $LabConfig = @{
     #Main Info
-    LabName  = "EV"
-    TimeZone = "Egypt Standard Time" #https://msdn.microsoft.com/en-us/library/ms912391%28v=winembedded.11%29.aspx?f=255&MSPPError=-2147217396
-    
+    LabName  = "SampleLab" #Domain name will be SampleLab.lab
+    TimeZone = "Egypt Standard Time" #See here for options: https://msdn.microsoft.com/en-us/library/ms912391
     LabsPath = "D:\VMs\Labs" #A folder with the lab name will be created under this path.
     
     #Sources
-    CreateParentVHDX = $false
+    CreateParentVHDX = $true
         #Use this only if Create Parents is set to true
     VHDXSize = 30GB
     ServerEdition = 'ServerDataCenterCore' #You should be learning to use Core already
     
     ServerISOPath = "D:\VMs\Lab\Sources\SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO"
-    ClientISOPath = "" #only required if you enable client creation.
 
-    ServerUpdatePackagePath = "D:\VMs\Lab\Sources\windows10.0-kb4039396-x64_bd1f9e1c7add02b8f3334f1aeaa07cae6632c3cf.msu" #use $null to skip installing packages (not recommended)
-    ClientUpdatePackagePath = ""
+    ServerUpdatePackagePath = "D:\VMs\Lab\Sources\windows10.0-kb4041688-x64_a098c258a1d8f6b4bbfff87ee5ab687d629d3bd9.msu" #use $null to skip installing packages (not recommended)
         #Use this only if Create Parents is set to false
-    ServerParentVHDXPath = "D:\VMs\Labs\Parent\WillyLabs_ServerParent.vhdx"
-    ClientParentVHDXPath = "" #only required if you enable client creation.
+    ServerParentVHDXPath = $null
 
 
     #Credentials
     LabPassword = "P@ssw0rd" #Only one password is used lab wide.
 
+
     #VMs
     FirstDCComputerName = "DC01"
     FirstDCIPLastOctet  = "10"
 
+
     #Member Servers
     CreateMemberServers = $true
     MemberServerFirstIP = 20 #the last octet begin with this number, must be an integer
-    MemberServerNames = "Exchange","HyperV","SCCM"
+    MemberServerNames = "SRV01","SRV02","SRV03"
 
 
     #Network Configuration
@@ -41,12 +40,12 @@ $LabConfig = @{
 
     #Proxy settings for file downloads
         #Use $null for these parameters if they are not required.
-    ProxyServer = "HTTP://proxy:8080"
-    ProxyUsername = "Domain\Username"
-    ProxyPassword = 'P@ssW0rd'
+    ProxyServer = $null #"HTTP://proxy:8080"
+    ProxyUsername = $null #"Domain\username"
+    ProxyPassword = $null #'P@ssw0rd'
 }
 
-#Calculated Values
+#Calculated Values. Do not edit after this line.
 
 $LabConfig += @{
         #Domain Info
@@ -56,12 +55,13 @@ $LabConfig += @{
     LabPwdScr = ConvertTo-SecureString -String $LabConfig.LabPassword -AsPlainText -Force
 }
 
+$DelRootPath    = "$($LabConfig.LabsPath)\$($LabConfig.LabName)"
+
 
 $LabConfig += @{
     
     #Folders
-    LabRootPath     = "$($LabConfig.LabsPath)\$($LabConfig.LabName)"
-
+    LabRootPath     = $DelRootPath 
 
     #Credentials
     BuiltinAdministratorCreds = New-Object System.Management.Automation.PSCredential("Administrator",$LabConfig.LabPwdScr)
@@ -84,3 +84,4 @@ $LabConfig += @{
     ProxyCreds = New-Object System.Management.Automation.PSCredential($LabConfig.ProxyUsername,(ConvertTo-SecureString -String $labconfig.ProxyPassword -AsPlainText -Force))
 }
 
+Get-Variable -Name del* | Remove-Variable
