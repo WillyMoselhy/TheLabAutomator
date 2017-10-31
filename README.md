@@ -6,7 +6,7 @@ Many parts of this script is inspired from this project https://github.com/Micro
 Use LabConfig.PS1 to configure the lab then run the LabAutomatorMain to create it.
 
 ## Usage
-Create a copy the LabConfig.PS1 file and edit it as desired then run the main script.
+Create a copy the SampleLabConfig.PS1 file and edit it as desired then run the main script.
 
 ## Actions
 The script will perform the following actions,
